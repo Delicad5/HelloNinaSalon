@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
+import { v4 as uuidv4 } from "uuid";
 import {
   Card,
   CardContent,
@@ -136,82 +138,325 @@ const AppointmentScheduling = () => {
     notes: "",
   });
 
-  // Load data from localStorage
+  // Load data from Supabase with localStorage fallback
   useEffect(() => {
-    // Load appointments
-    const storedAppointments = localStorage.getItem(STORAGE_KEY);
-    if (storedAppointments) {
+    const loadData = async () => {
       try {
-        setAppointments(JSON.parse(storedAppointments));
-      } catch (error) {
-        console.error("Error loading appointments:", error);
-      }
-    }
+        // Load appointments
+        const { data: appointmentsData, error: appointmentsError } =
+          await supabase.from("appointments").select("*");
 
-    // Load customers
-    const storedPelanggan = localStorage.getItem("pelangganData");
-    if (storedPelanggan) {
-      try {
-        const pelangganItems = JSON.parse(storedPelanggan);
-        const mappedCustomers = pelangganItems.map((item) => ({
-          id: item.id,
-          name: item.nama,
-          phone: item.telepon,
-          email: item.email,
-        }));
-        setCustomers(mappedCustomers);
-      } catch (error) {
-        console.error("Error loading customers:", error);
-      }
-    }
+        if (appointmentsError) {
+          throw appointmentsError;
+        }
 
-    // Load staff
-    const storedStaf = localStorage.getItem("stafData");
-    if (storedStaf) {
-      try {
-        const stafItems = JSON.parse(storedStaf);
-        const mappedStaff = stafItems.map((item) => ({
-          id: item.id,
-          name: item.nama,
-          role: item.posisi,
-        }));
-        setStaffList(mappedStaff);
-      } catch (error) {
-        console.error("Error loading staff:", error);
-      }
-    }
+        if (appointmentsData && appointmentsData.length > 0) {
+          // Map Supabase data structure to component's expected structure
+          const mappedAppointments = appointmentsData.map((appointment) => ({
+            id: appointment.id,
+            customerId: appointment.customer_id,
+            customerName: "", // Will be populated later
+            staffId: appointment.staff_id,
+            staffName: "", // Will be populated later
+            serviceId: appointment.service_id,
+            serviceName: "", // Will be populated later
+            date: appointment.date,
+            time: appointment.time,
+            duration: appointment.duration,
+            status: appointment.status,
+            notes: appointment.notes,
+          }));
+          setAppointments(mappedAppointments);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(mappedAppointments));
+        } else {
+          // Fallback to localStorage
+          const storedAppointments = localStorage.getItem(STORAGE_KEY);
+          if (storedAppointments) {
+            setAppointments(JSON.parse(storedAppointments));
+          }
+        }
 
-    // Load services with duration
-    const storedLayanan = localStorage.getItem("layananData");
-    if (storedLayanan) {
-      try {
-        const layananItems = JSON.parse(storedLayanan);
-        const mappedServices = layananItems.map((item) => ({
-          id: item.id,
-          name: item.nama,
-          price: item.harga,
-          duration: item.durasi || 30, // Default to 30 minutes if not specified
-        }));
-        setServices(mappedServices);
+        // Load customers
+        const { data: customersData, error: customersError } = await supabase
+          .from("customers")
+          .select("*");
+
+        if (customersError) {
+          throw customersError;
+        }
+
+        if (customersData && customersData.length > 0) {
+          const mappedCustomers = customersData.map((customer) => ({
+            id: customer.id,
+            name: customer.name,
+            phone: customer.phone,
+            email: customer.email,
+          }));
+          setCustomers(mappedCustomers);
+          localStorage.setItem(
+            "pelangganData",
+            JSON.stringify(
+              mappedCustomers.map((c) => ({
+                id: c.id,
+                nama: c.name,
+                telepon: c.phone,
+                email: c.email,
+              })),
+            ),
+          );
+        } else {
+          // Fallback to localStorage
+          const storedPelanggan = localStorage.getItem("pelangganData");
+          if (storedPelanggan) {
+            const pelangganItems = JSON.parse(storedPelanggan);
+            const mappedCustomers = pelangganItems.map((item) => ({
+              id: item.id,
+              name: item.nama,
+              phone: item.telepon,
+              email: item.email,
+            }));
+            setCustomers(mappedCustomers);
+          }
+        }
+
+        // Load staff
+        const { data: staffData, error: staffError } = await supabase
+          .from("staff")
+          .select("*");
+
+        if (staffError) {
+          throw staffError;
+        }
+
+        if (staffData && staffData.length > 0) {
+          const mappedStaff = staffData.map((staff) => ({
+            id: staff.id,
+            name: staff.name,
+            role: staff.position,
+          }));
+          setStaffList(mappedStaff);
+          localStorage.setItem(
+            "stafData",
+            JSON.stringify(
+              mappedStaff.map((s) => ({
+                id: s.id,
+                nama: s.name,
+                posisi: s.role,
+              })),
+            ),
+          );
+        } else {
+          // Fallback to localStorage
+          const storedStaf = localStorage.getItem("stafData");
+          if (storedStaf) {
+            const stafItems = JSON.parse(storedStaf);
+            const mappedStaff = stafItems.map((item) => ({
+              id: item.id,
+              name: item.nama,
+              role: item.posisi,
+            }));
+            setStaffList(mappedStaff);
+          }
+        }
+
+        // Load services
+        const { data: servicesData, error: servicesError } = await supabase
+          .from("services")
+          .select("*");
+
+        if (servicesError) {
+          throw servicesError;
+        }
+
+        if (servicesData && servicesData.length > 0) {
+          const mappedServices = servicesData.map((service) => ({
+            id: service.id,
+            name: service.name,
+            price: service.price,
+            duration: service.duration || 30,
+          }));
+          setServices(mappedServices);
+          localStorage.setItem(
+            "layananData",
+            JSON.stringify(
+              mappedServices.map((s) => ({
+                id: s.id,
+                nama: s.name,
+                harga: s.price,
+                durasi: s.duration,
+              })),
+            ),
+          );
+        } else {
+          // Fallback to localStorage
+          const storedLayanan = localStorage.getItem("layananData");
+          if (storedLayanan) {
+            const layananItems = JSON.parse(storedLayanan);
+            const mappedServices = layananItems.map((item) => ({
+              id: item.id,
+              name: item.nama,
+              price: item.harga,
+              duration: item.durasi || 30,
+            }));
+            setServices(mappedServices);
+          } else {
+            // Default services with duration if none exist
+            const defaultServices = [
+              { id: "1", name: "Potong Rambut", price: 50000, duration: 30 },
+              { id: "2", name: "Creambath", price: 100000, duration: 60 },
+              { id: "3", name: "Hair Coloring", price: 350000, duration: 120 },
+              { id: "4", name: "Facial", price: 150000, duration: 60 },
+              { id: "5", name: "Manicure", price: 80000, duration: 45 },
+            ];
+            setServices(defaultServices);
+          }
+        }
+
+        // Update appointment names after loading all data
+        if (appointmentsData && appointmentsData.length > 0) {
+          const updatedAppointments = appointmentsData.map((appointment) => {
+            const customer = customersData?.find(
+              (c) => c.id === appointment.customer_id,
+            );
+            const staff = staffData?.find((s) => s.id === appointment.staff_id);
+            const service = servicesData?.find(
+              (s) => s.id === appointment.service_id,
+            );
+
+            return {
+              id: appointment.id,
+              customerId: appointment.customer_id,
+              customerName: customer?.name || "Unknown Customer",
+              staffId: appointment.staff_id,
+              staffName: staff?.name || "Unknown Staff",
+              serviceId: appointment.service_id,
+              serviceName: service?.name || "Unknown Service",
+              date: appointment.date,
+              time: appointment.time,
+              duration: appointment.duration,
+              status: appointment.status,
+              notes: appointment.notes,
+            };
+          });
+
+          setAppointments(updatedAppointments);
+          localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify(updatedAppointments),
+          );
+        }
       } catch (error) {
-        console.error("Error loading services:", error);
+        console.error("Error loading data from Supabase:", error);
+
+        // Fallback to localStorage for all data
+        const storedAppointments = localStorage.getItem(STORAGE_KEY);
+        if (storedAppointments) {
+          try {
+            setAppointments(JSON.parse(storedAppointments));
+          } catch (error) {
+            console.error("Error loading appointments:", error);
+          }
+        }
+
+        const storedPelanggan = localStorage.getItem("pelangganData");
+        if (storedPelanggan) {
+          try {
+            const pelangganItems = JSON.parse(storedPelanggan);
+            const mappedCustomers = pelangganItems.map((item) => ({
+              id: item.id,
+              name: item.nama,
+              phone: item.telepon,
+              email: item.email,
+            }));
+            setCustomers(mappedCustomers);
+          } catch (error) {
+            console.error("Error loading customers:", error);
+          }
+        }
+
+        const storedStaf = localStorage.getItem("stafData");
+        if (storedStaf) {
+          try {
+            const stafItems = JSON.parse(storedStaf);
+            const mappedStaff = stafItems.map((item) => ({
+              id: item.id,
+              name: item.nama,
+              role: item.posisi,
+            }));
+            setStaffList(mappedStaff);
+          } catch (error) {
+            console.error("Error loading staff:", error);
+          }
+        }
+
+        const storedLayanan = localStorage.getItem("layananData");
+        if (storedLayanan) {
+          try {
+            const layananItems = JSON.parse(storedLayanan);
+            const mappedServices = layananItems.map((item) => ({
+              id: item.id,
+              name: item.nama,
+              price: item.harga,
+              duration: item.durasi || 30,
+            }));
+            setServices(mappedServices);
+          } catch (error) {
+            console.error("Error loading services:", error);
+          }
+        } else {
+          // Default services with duration if none exist
+          const defaultServices = [
+            { id: "1", name: "Potong Rambut", price: 50000, duration: 30 },
+            { id: "2", name: "Creambath", price: 100000, duration: 60 },
+            { id: "3", name: "Hair Coloring", price: 350000, duration: 120 },
+            { id: "4", name: "Facial", price: 150000, duration: 60 },
+            { id: "5", name: "Manicure", price: 80000, duration: 45 },
+          ];
+          setServices(defaultServices);
+        }
       }
-    } else {
-      // Default services with duration if none exist
-      const defaultServices = [
-        { id: "1", name: "Potong Rambut", price: 50000, duration: 30 },
-        { id: "2", name: "Creambath", price: 100000, duration: 60 },
-        { id: "3", name: "Hair Coloring", price: 350000, duration: 120 },
-        { id: "4", name: "Facial", price: 150000, duration: 60 },
-        { id: "5", name: "Manicure", price: 80000, duration: 45 },
-      ];
-      setServices(defaultServices);
-    }
+    };
+
+    loadData();
   }, []);
 
-  // Save appointments to localStorage whenever they change
+  // Save appointments to Supabase and localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appointments));
+    const saveAppointments = async () => {
+      try {
+        // Always save to localStorage as backup
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appointments));
+
+        // Save to Supabase
+        for (const appointment of appointments) {
+          const supabaseAppointment = {
+            id: appointment.id,
+            customer_id: appointment.customerId,
+            staff_id: appointment.staffId,
+            service_id: appointment.serviceId,
+            date: new Date(appointment.date).toISOString().split("T")[0],
+            time: appointment.time,
+            duration: appointment.duration,
+            status: appointment.status,
+            notes: appointment.notes || null,
+          };
+
+          const { error } = await supabase
+            .from("appointments")
+            .upsert(supabaseAppointment);
+
+          if (error) {
+            console.error(`Error saving appointment ${appointment.id}:`, error);
+          }
+        }
+      } catch (error) {
+        console.error("Error saving appointments to Supabase:", error);
+      }
+    };
+
+    if (appointments.length > 0) {
+      saveAppointments();
+    }
   }, [appointments]);
 
   // Filter appointments for the selected date
@@ -283,7 +528,7 @@ const AppointmentScheduling = () => {
     }
 
     const newAppointmentData: Appointment = {
-      id: `app-${Date.now()}`,
+      id: `app-${uuidv4()}`,
       customerId: selectedCustomer.id,
       customerName: selectedCustomer.name,
       staffId: selectedStaff.id,

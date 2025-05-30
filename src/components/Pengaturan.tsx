@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, Upload, Check, Home } from "lucide-react";
+import { ArrowLeft, Save, Upload, Check, Home, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -33,6 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import MigrationDialog from "./MigrationDialog";
 
 const STORAGE_KEYS = {
   GENERAL: "salon_settings_general",
@@ -46,6 +47,7 @@ const Pengaturan = () => {
   const navigate = useNavigate();
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [lastSavedSection, setLastSavedSection] = useState("");
+  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
 
   // State untuk pengaturan umum
   const [salonName, setSalonName] = useState("Salon Beauty");
@@ -313,6 +315,7 @@ const Pengaturan = () => {
             <TabsTrigger value="printer">Printer</TabsTrigger>
             <TabsTrigger value="pembayaran">Pembayaran</TabsTrigger>
             <TabsTrigger value="pengguna">Pengguna</TabsTrigger>
+            <TabsTrigger value="database">Database</TabsTrigger>
           </TabsList>
 
           <TabsContent value="umum" className="space-y-4">
@@ -582,6 +585,71 @@ const Pengaturan = () => {
               </CardFooter>
             </Card>
           </TabsContent>
+
+          <TabsContent value="database" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Pengaturan Database</CardTitle>
+                <CardDescription>
+                  Kelola koneksi database dan migrasi data
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-muted p-4 rounded-md">
+                  <h3 className="font-medium mb-2">Informasi Database</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Aplikasi ini menggunakan Supabase sebagai database. Data
+                    disimpan secara lokal (localStorage) dan di Supabase untuk
+                    memastikan ketersediaan data.
+                  </p>
+
+                  <div className="flex items-center justify-between py-2 border-b">
+                    <span className="text-sm font-medium">Status Koneksi</span>
+                    <span className="text-sm text-green-600 flex items-center">
+                      <Check className="h-4 w-4 mr-1" /> Terhubung
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-2 border-b">
+                    <span className="text-sm font-medium">URL Database</span>
+                    <span className="text-sm text-muted-foreground">
+                      {import.meta.env.VITE_SUPABASE_URL
+                        ? "Terkonfigurasi"
+                        : "Tidak terkonfigurasi"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-sm font-medium">API Key</span>
+                    <span className="text-sm text-muted-foreground">
+                      {import.meta.env.VITE_SUPABASE_ANON_KEY
+                        ? "Terkonfigurasi"
+                        : "Tidak terkonfigurasi"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 p-4 rounded-md">
+                  <h3 className="font-medium mb-2 text-amber-800">
+                    Migrasi Data
+                  </h3>
+                  <p className="text-sm text-amber-700 mb-4">
+                    Anda dapat memindahkan semua data dari penyimpanan lokal
+                    (localStorage) ke database Supabase. Proses ini akan
+                    memastikan data Anda tersimpan dengan aman di cloud.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="bg-amber-100 hover:bg-amber-200 border-amber-200"
+                    onClick={() => setShowMigrationDialog(true)}
+                  >
+                    <Database className="mr-2 h-4 w-4" />
+                    Migrasi Data ke Supabase
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
 
@@ -618,6 +686,11 @@ const Pengaturan = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MigrationDialog
+        open={showMigrationDialog}
+        onOpenChange={setShowMigrationDialog}
+      />
     </div>
   );
 };
