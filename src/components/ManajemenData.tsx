@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -35,6 +35,7 @@ import {
   Eye,
   ArrowLeft,
   Key,
+  Loader2,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import {
@@ -46,6 +47,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { staffService } from "@/lib/dataService";
 
 interface LayananItem {
   id: string;
@@ -90,6 +92,7 @@ interface PenggunaItem {
 }
 
 const ManajemenData = () => {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("layanan");
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -97,6 +100,7 @@ const ManajemenData = () => {
     "add" | "edit" | "view" | "reset"
   >("add");
   const [currentItem, setCurrentItem] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Mock data
   const layananData: LayananItem[] = [
@@ -245,7 +249,6 @@ const ManajemenData = () => {
     // Check if there's stored data in localStorage
     const storedLayanan = localStorage.getItem("layananData");
     const storedProduk = localStorage.getItem("produkData");
-    const storedStaf = localStorage.getItem("stafData");
     const storedPelanggan = localStorage.getItem("pelangganData");
     const storedPengguna = localStorage.getItem("penggunaData");
 
@@ -275,18 +278,7 @@ const ManajemenData = () => {
       localStorage.setItem("produkData", JSON.stringify(produkData));
     }
 
-    // Set staf data
-    if (storedStaf) {
-      try {
-        setStafItems(JSON.parse(storedStaf));
-      } catch (error) {
-        console.error("Error parsing staf data:", error);
-        setStafItems(stafData);
-      }
-    } else {
-      setStafItems(stafData);
-      localStorage.setItem("stafData", JSON.stringify(stafData));
-    }
+    // Staf data will be loaded from Supabase in a separate effect
 
     // Set pelanggan data
     if (storedPelanggan) {
@@ -358,6 +350,54 @@ const ManajemenData = () => {
     }
   }, []);
 
+  // Load staff data from Supabase
+  useEffect(() => {
+    const loadStaffData = async () => {
+      setIsLoading(true);
+      try {
+        const staffData = await staffService.getAll();
+
+        // Map Supabase staff data to the format expected by the component
+        const mappedStaffData = staffData.map((staff) => ({
+          id: staff.id,
+          nama: staff.name,
+          posisi: staff.position,
+          telepon: staff.phone,
+          status: staff.status,
+          komisi: staff.commission_rate,
+        }));
+
+        setStafItems(mappedStaffData);
+      } catch (error) {
+        console.error("Error loading staff data from Supabase:", error);
+        toast({
+          title: "Error",
+          description: "Gagal memuat data staf dari database.",
+          variant: "destructive",
+        });
+        // Fallback to mock data if Supabase fails
+        setStafItems(stafData);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadStaffData();
+  }, []);
+
+  // Set active tab based on URL path
+  useEffect(() => {
+    if (location.pathname === "/manajemen/layanan") {
+      setActiveTab("layanan");
+    } else if (location.pathname === "/manajemen/produk") {
+      setActiveTab("produk");
+    } else if (location.pathname === "/manajemen/staf") {
+      setActiveTab("staf");
+    } else if (location.pathname === "/manajemen/pelanggan") {
+      setActiveTab("pelanggan");
+    }
+  }, [location.pathname]);
+
   // Initialize state with mock data
   const [layananItems, setLayananItems] = useState<LayananItem[]>([]);
   const [produkItems, setProdukItems] = useState<ProdukItem[]>([]);
@@ -418,7 +458,7 @@ const ManajemenData = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDeleteItem = (id: string) => {
+  const handleDeleteItem = async (id: string) => {
     // Delete item based on active tab
     if (activeTab === "layanan") {
       const updatedItems = layananItems.filter((item) => item.id !== id);
@@ -429,9 +469,30 @@ const ManajemenData = () => {
       setProdukItems(updatedItems);
       localStorage.setItem("produkData", JSON.stringify(updatedItems));
     } else if (activeTab === "staf") {
-      const updatedItems = stafItems.filter((item) => item.id !== id);
-      setStafItems(updatedItems);
-      localStorage.setItem("stafData", JSON.stringify(updatedItems));
+      setIsLoading(true);
+      try {
+        // Delete staff from Supabase
+        const success = await staffService.delete(id);
+        if (success) {
+          const updatedItems = stafItems.filter((item) => item.id !== id);
+          setStafItems(updatedItems);
+          toast({
+            title: "Sukses",
+            description: "Data staf berhasil dihapus.",
+          });
+        } else {
+          throw new Error("Failed to delete staff from Supabase");
+        }
+      } catch (error) {
+        console.error("Error deleting staff:", error);
+        toast({
+          title: "Error",
+          description: "Gagal menghapus data staf.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     } else if (activeTab === "pelanggan") {
       const updatedItems = pelangganItems.filter((item) => item.id !== id);
       setPelangganItems(updatedItems);
@@ -459,7 +520,7 @@ const ManajemenData = () => {
     }
   };
 
-  const handleSaveItem = (e: React.FormEvent) => {
+  const handleSaveItem = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Generate a new ID (in a real app, this would be done by the database)
@@ -478,10 +539,60 @@ const ManajemenData = () => {
         setProdukItems(updatedItems);
         localStorage.setItem("produkData", JSON.stringify(updatedItems));
       } else if (activeTab === "staf") {
-        const newItem: StafItem = { ...currentItem, id: newId };
-        const updatedItems = [...stafItems, newItem];
-        setStafItems(updatedItems);
-        localStorage.setItem("stafData", JSON.stringify(updatedItems));
+        setIsLoading(true);
+        try {
+          // Map the form data to Supabase staff format
+          const staffData = {
+            name: currentItem.nama,
+            position: currentItem.posisi,
+            phone: currentItem.telepon,
+            status: currentItem.status,
+            commission_rate: currentItem.komisi,
+          };
+
+          // Save to Supabase
+          const success = await staffService.save([
+            ...stafItems.map((item) => ({
+              id: item.id,
+              name: item.nama,
+              position: item.posisi,
+              phone: item.telepon,
+              status: item.status,
+              commission_rate: item.komisi,
+            })),
+            staffData,
+          ]);
+
+          if (success) {
+            // Refresh staff data from Supabase
+            const staffData = await staffService.getAll();
+            const mappedStaffData = staffData.map((staff) => ({
+              id: staff.id,
+              nama: staff.name,
+              posisi: staff.position,
+              telepon: staff.phone,
+              status: staff.status,
+              komisi: staff.commission_rate,
+            }));
+
+            setStafItems(mappedStaffData);
+            toast({
+              title: "Sukses",
+              description: "Data staf berhasil ditambahkan.",
+            });
+          } else {
+            throw new Error("Failed to save staff to Supabase");
+          }
+        } catch (error) {
+          console.error("Error adding staff:", error);
+          toast({
+            title: "Error",
+            description: "Gagal menambahkan data staf.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoading(false);
+        }
       } else if (activeTab === "pelanggan") {
         const newItem: PelangganItem = { ...currentItem, id: newId };
         const updatedItems = [...pelangganItems, newItem];
@@ -531,11 +642,45 @@ const ManajemenData = () => {
         setProdukItems(updatedItems);
         localStorage.setItem("produkData", JSON.stringify(updatedItems));
       } else if (activeTab === "staf") {
-        const updatedItems = stafItems.map((item) =>
-          item.id === currentItem.id ? currentItem : item,
-        );
-        setStafItems(updatedItems);
-        localStorage.setItem("stafData", JSON.stringify(updatedItems));
+        setIsLoading(true);
+        try {
+          // Map all staff items to Supabase format
+          const updatedItems = stafItems.map((item) =>
+            item.id === currentItem.id ? currentItem : item,
+          );
+
+          // Convert to Supabase format
+          const supabaseStaffData = updatedItems.map((item) => ({
+            id: item.id,
+            name: item.nama,
+            position: item.posisi,
+            phone: item.telepon,
+            status: item.status,
+            commission_rate: item.komisi,
+          }));
+
+          // Save to Supabase
+          const success = await staffService.save(supabaseStaffData);
+
+          if (success) {
+            setStafItems(updatedItems);
+            toast({
+              title: "Sukses",
+              description: "Data staf berhasil diperbarui.",
+            });
+          } else {
+            throw new Error("Failed to update staff in Supabase");
+          }
+        } catch (error) {
+          console.error("Error updating staff:", error);
+          toast({
+            title: "Error",
+            description: "Gagal memperbarui data staf.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoading(false);
+        }
       } else if (activeTab === "pelanggan") {
         const updatedItems = pelangganItems.map((item) =>
           item.id === currentItem.id ? currentItem : item,
@@ -1302,48 +1447,66 @@ const ManajemenData = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {stafItems.map((staf) => (
-                      <TableRow key={staf.id}>
-                        <TableCell className="font-medium">
-                          {staf.nama}
-                        </TableCell>
-                        <TableCell>{staf.posisi}</TableCell>
-                        <TableCell>{staf.telepon}</TableCell>
-                        <TableCell>
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs ${staf.status === "Aktif" ? "bg-green-100 text-green-800" : staf.status === "Cuti" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}
-                          >
-                            {staf.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>{staf.komisi}%</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleViewItem(staf)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditItem(staf)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteItem(staf.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8">
+                          <div className="flex justify-center items-center">
+                            <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                            <span>Memuat data staf...</span>
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : stafItems.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8">
+                          Tidak ada data staf. Silakan tambahkan staf baru.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      stafItems.map((staf) => (
+                        <TableRow key={staf.id}>
+                          <TableCell className="font-medium">
+                            {staf.nama}
+                          </TableCell>
+                          <TableCell>{staf.posisi}</TableCell>
+                          <TableCell>{staf.telepon}</TableCell>
+                          <TableCell>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs ${staf.status === "Aktif" ? "bg-green-100 text-green-800" : staf.status === "Cuti" ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"}`}
+                            >
+                              {staf.status}
+                            </span>
+                          </TableCell>
+                          <TableCell>{staf.komisi}%</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewItem(staf)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditItem(staf)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteItem(staf.id)}
+                                disabled={isLoading}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>

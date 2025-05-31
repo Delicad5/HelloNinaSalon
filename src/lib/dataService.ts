@@ -16,7 +16,7 @@ export async function getData<T>(
     }
 
     if (data && data.length > 0) {
-      // Also update localStorage with the latest data
+      // Also update localStorage with the latest data for offline access
       localStorage.setItem(localStorageKey, JSON.stringify(data));
       return data as T[];
     }
@@ -24,7 +24,27 @@ export async function getData<T>(
     // If no data in Supabase, try localStorage
     const localData = localStorage.getItem(localStorageKey);
     if (localData) {
-      return JSON.parse(localData) as T[];
+      const parsedData = JSON.parse(localData) as T[];
+
+      // Try to sync localStorage data to Supabase
+      try {
+        const dataWithIds = parsedData.map((item) => ({
+          ...item,
+          id: (item as any).id || uuidv4(),
+        }));
+
+        await supabase.from(table).upsert(dataWithIds);
+        console.log(
+          `Synced ${dataWithIds.length} items from localStorage to Supabase for ${table}`,
+        );
+      } catch (syncError) {
+        console.error(
+          `Failed to sync localStorage data to Supabase for ${table}:`,
+          syncError,
+        );
+      }
+
+      return parsedData;
     }
 
     return [];
@@ -48,7 +68,7 @@ export async function saveData<T extends { id: string }>(
   data: T[],
 ): Promise<boolean> {
   try {
-    // Always save to localStorage as backup
+    // Always save to localStorage as backup for offline access
     localStorage.setItem(localStorageKey, JSON.stringify(data));
 
     // Ensure all items have an ID
@@ -65,6 +85,9 @@ export async function saveData<T extends { id: string }>(
       throw error;
     }
 
+    console.log(
+      `Successfully saved ${dataWithIds.length} items to Supabase for ${table}`,
+    );
     return true;
   } catch (error) {
     console.error(`Error in saveData for ${table}:`, error);
@@ -88,7 +111,7 @@ export async function deleteData(
       throw error;
     }
 
-    // Also update localStorage
+    // Also update localStorage to keep it in sync
     const localData = localStorage.getItem(localStorageKey);
     if (localData) {
       const parsedData = JSON.parse(localData);
@@ -96,6 +119,7 @@ export async function deleteData(
       localStorage.setItem(localStorageKey, JSON.stringify(updatedData));
     }
 
+    console.log(`Successfully deleted item with id ${id} from ${table}`);
     return true;
   } catch (error) {
     console.error(`Error in deleteData for ${table}:`, error);
@@ -128,7 +152,7 @@ export async function getSettings(category: string): Promise<any> {
     }
 
     if (data) {
-      // Update localStorage with the latest settings
+      // Update localStorage with the latest settings for offline access
       localStorage.setItem(
         `salon_settings_${category}`,
         JSON.stringify(data.settings),
@@ -139,7 +163,27 @@ export async function getSettings(category: string): Promise<any> {
     // If no data in Supabase, try localStorage
     const localData = localStorage.getItem(`salon_settings_${category}`);
     if (localData) {
-      return JSON.parse(localData);
+      const parsedSettings = JSON.parse(localData);
+
+      // Try to sync localStorage settings to Supabase
+      try {
+        await supabase.from("settings").upsert({
+          id: `settings-${category}`,
+          category,
+          settings: parsedSettings,
+          updated_at: new Date().toISOString(),
+        });
+        console.log(
+          `Synced settings for ${category} from localStorage to Supabase`,
+        );
+      } catch (syncError) {
+        console.error(
+          `Failed to sync settings for ${category} to Supabase:`,
+          syncError,
+        );
+      }
+
+      return parsedSettings;
     }
 
     return null;
@@ -162,7 +206,7 @@ export async function saveSettings(
   settings: any,
 ): Promise<boolean> {
   try {
-    // Always save to localStorage as backup
+    // Always save to localStorage as backup for offline access
     localStorage.setItem(
       `salon_settings_${category}`,
       JSON.stringify(settings),
@@ -181,6 +225,7 @@ export async function saveSettings(
       throw error;
     }
 
+    console.log(`Successfully saved settings for ${category} to Supabase`);
     return true;
   } catch (error) {
     console.error(`Error in saveSettings for ${category}:`, error);

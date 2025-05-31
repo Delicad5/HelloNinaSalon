@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRoutes, Routes, Route, Navigate } from "react-router-dom";
 import Home from "./components/home";
 import TransaksiForm from "./components/TransaksiForm";
@@ -9,16 +9,116 @@ import LaporanHarian from "./components/LaporanHarian";
 import LaporanKomisi from "./components/LaporanKomisi";
 import Pengaturan from "./components/Pengaturan";
 import LoginForm from "./components/LoginForm";
+import SignupForm from "./components/SignupForm";
 import Unauthorized from "./components/Unauthorized";
 import AuthGuard from "./components/AuthGuard";
 import AppointmentScheduling from "./components/AppointmentScheduling";
 import routes from "tempo-routes";
-import { isAuthenticated } from "./lib/auth";
+import { isAuthenticated, getCurrentUser, initializeUsers } from "./lib/auth";
+import { supabase } from "./lib/supabase";
 
 function App() {
   // Use Tempo routes if VITE_TEMPO is true
   const tempoRoutes =
     import.meta.env.VITE_TEMPO === "true" ? useRoutes(routes) : null;
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Initialize users and set up auth state listener
+  useEffect(() => {
+    // Set a timeout to ensure loading state is eventually updated
+    const loadingTimeout = setTimeout(() => {
+      if (isLoading) {
+        console.log("Loading timeout reached, forcing loading state to false");
+        setIsLoading(false);
+      }
+    }, 10000); // 10 seconds timeout
+
+    const initApp = async () => {
+      try {
+        // Add a timeout promise to prevent hanging
+        const initPromise = initializeUsers();
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Initialization timed out")), 8000);
+        });
+
+        await Promise.race([initPromise, timeoutPromise]).catch((error) => {
+          console.error("Initialization timed out or failed:", error);
+        });
+
+        console.log("Users initialization completed");
+
+        // Check if user is already authenticated
+        try {
+          const user = await getCurrentUser();
+          if (user) {
+            console.log("User already authenticated:", user);
+          }
+        } catch (authError) {
+          console.error("Error checking authentication:", authError);
+        }
+      } catch (error) {
+        console.error("Failed to initialize users:", error);
+      } finally {
+        // Always set loading to false, even if there was an error
+        setIsLoading(false);
+      }
+    };
+
+    // Set up auth state listener with error handling
+    let subscription;
+    try {
+      const { data } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          console.log("Auth state changed:", event);
+          if (event === "SIGNED_IN") {
+            try {
+              // Update user in localStorage
+              const user = await getCurrentUser();
+              console.log("User signed in:", user);
+            } catch (error) {
+              console.error("Error handling sign in:", error);
+            } finally {
+              // Ensure loading state is updated
+              setIsLoading(false);
+            }
+          } else if (event === "SIGNED_OUT") {
+            // Clear user from localStorage
+            localStorage.removeItem("salon_auth_user");
+            console.log("User signed out");
+            setIsLoading(false);
+          }
+        },
+      );
+
+      subscription = data.subscription;
+    } catch (subError) {
+      console.error("Error setting up auth state listener:", subError);
+      setIsLoading(false);
+    }
+
+    initApp();
+
+    // Clean up subscription and timeout
+    return () => {
+      clearTimeout(loadingTimeout);
+      if (subscription) {
+        try {
+          subscription.unsubscribe();
+        } catch (error) {
+          console.error("Error unsubscribing:", error);
+        }
+      }
+    };
+  }, [isLoading]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <Suspense fallback={<p>Loading...</p>}>
@@ -28,6 +128,10 @@ function App() {
         <Route
           path="/login"
           element={isAuthenticated() ? <Navigate to="/" /> : <LoginForm />}
+        />
+        <Route
+          path="/signup"
+          element={isAuthenticated() ? <Navigate to="/" /> : <SignupForm />}
         />
         <Route path="/unauthorized" element={<Unauthorized />} />
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import SupabaseStatus from "./SupabaseStatus";
 import {
   Card,
   CardContent,
@@ -28,11 +29,11 @@ import {
   TrendingUp,
   UserCircle,
 } from "lucide-react";
-import { getCurrentUser, logout, hasRole } from "@/lib/auth";
+import { getCurrentUserSync, logout, hasRole } from "@/lib/auth";
 
 const Home = () => {
   const navigate = useNavigate();
-  const currentUser = getCurrentUser();
+  const currentUser = getCurrentUserSync();
   const isAdmin = hasRole("admin");
 
   // State untuk menyimpan pengaturan salon
@@ -173,8 +174,8 @@ const Home = () => {
     }
   }, []);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
   };
 
@@ -280,15 +281,18 @@ const Home = () => {
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold md:hidden">{salonName}</h1>
             <div className="flex items-center">
-              <span className="text-sm text-muted-foreground mr-4">
-                <Calendar className="inline mr-1 h-4 w-4" />
-                {new Date().toLocaleDateString("id-ID", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </span>
+              <div className="flex items-center gap-2">
+                <div className="text-sm text-muted-foreground mr-4">
+                  <Calendar className="inline mr-1 h-4 w-4" />
+                  {new Date().toLocaleDateString("id-ID", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </div>
+                <SupabaseStatus />
+              </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium hidden md:inline-block">
                   {currentUser?.name || "User"}

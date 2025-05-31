@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -24,18 +24,26 @@ const LoginForm = () => {
 
   // Initialize default users if needed
   React.useEffect(() => {
-    initializeUsers();
+    const initUsers = async () => {
+      try {
+        await initializeUsers();
+        console.log("Users initialized successfully");
+      } catch (error) {
+        console.error("Failed to initialize users:", error);
+      }
+    };
+    initUsers();
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // For demo purposes, we'll use simple credentials
-    // Admin: username="admin", password="admin"
-    // Staff: username="staff", password="staff"
-    setTimeout(() => {
-      const user = login(username, password);
+    try {
+      // For demo purposes, we'll use simple credentials
+      // Admin: username="admin", password="admin"
+      // Staff: username="staff", password="staff"
+      const user = await login(username, password);
 
       if (user) {
         toast({
@@ -50,9 +58,16 @@ const LoginForm = () => {
           variant: "destructive",
         });
       }
-
+    } catch (error) {
+      console.error("Login error:", error);
+      toast({
+        title: "Login gagal",
+        description: "Terjadi kesalahan saat login. Silakan coba lagi.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000); // Simulate network request
+    }
   };
 
   return (
@@ -91,10 +106,16 @@ const LoginForm = () => {
               </div>
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col gap-4">
             <Button className="w-full" type="submit" disabled={isLoading}>
               {isLoading ? "Memproses..." : "Login"}
             </Button>
+            <div className="text-center text-sm">
+              Belum punya akun?{" "}
+              <Link to="/signup" className="text-primary hover:underline">
+                Daftar di sini
+              </Link>
+            </div>
           </CardFooter>
         </form>
         <div className="px-6 pb-4 text-center text-sm text-muted-foreground">

@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { migrateDataToSupabase } from "@/lib/migrationUtils";
+import { supabase } from "@/lib/supabase";
 import { AlertCircle, CheckCircle2, Database } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -34,7 +35,25 @@ const MigrationDialog: React.FC<MigrationDialogProps> = ({
       setMigrationStatus("migrating");
       setMessage("Memulai migrasi data ke Supabase...");
 
-      // Simulate progress updates
+      // Check Supabase connection first
+      try {
+        const { error } = await supabase.from("users").select("count").limit(1);
+        if (error) {
+          throw new Error(`Koneksi ke Supabase gagal: ${error.message}`);
+        }
+      } catch (connectionError) {
+        setMigrationStatus("error");
+        setMessage(`Koneksi ke Supabase gagal: ${connectionError.message}`);
+        toast({
+          title: "Koneksi Gagal",
+          description:
+            "Tidak dapat terhubung ke database Supabase. Periksa koneksi internet dan kredensial Supabase.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Set up progress updates
       const progressInterval = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 95) {

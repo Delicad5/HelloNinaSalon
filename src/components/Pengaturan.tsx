@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import SupabaseStatus from "./SupabaseStatus";
 import { ArrowLeft, Save, Upload, Check, Home, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -605,9 +606,7 @@ const Pengaturan = () => {
 
                   <div className="flex items-center justify-between py-2 border-b">
                     <span className="text-sm font-medium">Status Koneksi</span>
-                    <span className="text-sm text-green-600 flex items-center">
-                      <Check className="h-4 w-4 mr-1" /> Terhubung
-                    </span>
+                    <SupabaseStatus />
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b">
