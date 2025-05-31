@@ -18,9 +18,11 @@ import { isAuthenticated, getCurrentUser, initializeUsers } from "./lib/auth";
 import { supabase } from "./lib/supabase";
 
 function App() {
-  // Use Tempo routes if VITE_TEMPO is true
+  // Use Tempo routes only in development environment
   const tempoRoutes =
-    import.meta.env.VITE_TEMPO === "true" ? useRoutes(routes) : null;
+    import.meta.env.DEV && import.meta.env.VITE_TEMPO === "true"
+      ? useRoutes(routes)
+      : null;
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -243,8 +245,8 @@ function App() {
           }
         />
 
-        {/* Tempo route for storyboards */}
-        {import.meta.env.VITE_TEMPO === "true" && (
+        {/* Tempo route for storyboards - only in development */}
+        {import.meta.env.DEV && import.meta.env.VITE_TEMPO === "true" && (
           <Route path="/tempobook/*" element={<div />} />
         )}
 

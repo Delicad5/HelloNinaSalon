@@ -32,3 +32,5 @@ core
 
 .github/
 
+# Vercel
+.vercel
