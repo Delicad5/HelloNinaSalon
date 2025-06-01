@@ -111,6 +111,27 @@ export type Database = {
         }
         Relationships: []
       }
+      settings: {
+        Row: {
+          category: string
+          id: string
+          settings: Json
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          id?: string
+          settings: Json
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          id?: string
+          settings?: Json
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       staff: {
         Row: {
           commission_rate: number
@@ -143,6 +164,113 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      transaction_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          item_id: string | null
+          name: string
+          price: number
+          quantity: number
+          staff_id: string | null
+          transaction_id: string | null
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          item_id?: string | null
+          name: string
+          price: number
+          quantity: number
+          staff_id?: string | null
+          transaction_id?: string | null
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          item_id?: string | null
+          name?: string
+          price?: number
+          quantity?: number
+          staff_id?: string | null
+          transaction_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_items_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_items_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          date: string
+          discount_amount: number | null
+          discount_type: string | null
+          discount_value: number | null
+          id: string
+          payment_method: string
+          status: string
+          subtotal: number
+          time: string
+          total: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          date: string
+          discount_amount?: number | null
+          discount_type?: string | null
+          discount_value?: number | null
+          id?: string
+          payment_method: string
+          status: string
+          subtotal: number
+          time: string
+          total: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          date?: string
+          discount_amount?: number | null
+          discount_type?: string | null
+          discount_value?: number | null
+          id?: string
+          payment_method?: string
+          status?: string
+          subtotal?: number
+          time?: string
+          total?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       users: {
         Row: {

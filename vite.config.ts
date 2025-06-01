@@ -15,7 +15,9 @@ export default defineConfig({
   plugins: [
     react(),
     // Only use tempo plugin in development
-    process.env.NODE_ENV === "development" ? tempo() : null,
+    process.env.NODE_ENV === "development" && process.env.VITE_TEMPO === "true"
+      ? tempo()
+      : null,
   ].filter(Boolean),
   resolve: {
     preserveSymlinks: true,

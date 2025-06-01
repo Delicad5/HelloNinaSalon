@@ -90,19 +90,19 @@ const Home = () => {
         const transactionCount = todayTransactions.length;
 
         // Find top service
-        const serviceCount = {};
+        const serviceCount: Record<string, number> = {};
         todayTransactions.forEach((trx) => {
-          trx.items.forEach((item) => {
-            if (item.type === "service") {
+          trx.items?.forEach((item) => {
+            if (item.type === "service" && item.name) {
               serviceCount[item.name] = (serviceCount[item.name] || 0) + 1;
             }
           });
         });
 
         // Find top staff
-        const staffCount = {};
+        const staffCount: Record<string, number> = {};
         todayTransactions.forEach((trx) => {
-          trx.items.forEach((item) => {
+          trx.items?.forEach((item) => {
             if (item.type === "service" && item.staffId) {
               staffCount[item.staffId] = (staffCount[item.staffId] || 0) + 1;
             }
@@ -127,10 +127,14 @@ const Home = () => {
             // Get staff name from staffId
             const storedStaff = localStorage.getItem("stafData");
             if (storedStaff) {
-              const staffList = JSON.parse(storedStaff);
-              const staff = staffList.find((s) => s.id === staffId);
-              if (staff) {
-                topStaff = staff.nama;
+              try {
+                const staffList = JSON.parse(storedStaff);
+                const staff = staffList.find((s: any) => s.id === staffId);
+                if (staff && staff.nama) {
+                  topStaff = staff.nama;
+                }
+              } catch (error) {
+                console.error("Error parsing staff data:", error);
               }
             }
           }
@@ -146,10 +150,12 @@ const Home = () => {
 
         // Get the 4 most recent transactions
         const recentTrx = parsedTransactions
-          .sort((a, b) => new Date(b.date) - new Date(a.date))
+          .sort(
+            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+          )
           .slice(0, 4)
           .map((trx) => ({
-            id: trx.id,
+            id: trx.id || `trx-${Math.random().toString(36).substr(2, 9)}`,
             customer: trx.customer?.name || "Pelanggan",
             service:
               trx.items && trx.items[0]
@@ -159,7 +165,7 @@ const Home = () => {
             amount: trx.total || 0,
             time:
               trx.time ||
-              new Date(trx.date).toLocaleTimeString("id-ID", {
+              new Date(trx.date).toLocaleTimeString(undefined, {
                 hour: "2-digit",
                 minute: "2-digit",
               }),

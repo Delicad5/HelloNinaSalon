@@ -42,13 +42,13 @@ export const initializeUsers = async (): Promise<void> => {
 
     const queryPromise = supabase.from("users").select("*");
 
-    const { data: supabaseUsers, error } = await Promise.race([
+    const { data: supabaseUsers, error } = (await Promise.race([
       queryPromise,
       timeoutPromise,
     ]).catch((err) => {
       console.error("Timeout or error checking users:", err);
       return { data: null, error: err };
-    });
+    })) || { data: null, error: new Error("Failed to query users") };
 
     if (error) {
       console.error("Error checking users in Supabase:", error.message);
@@ -283,13 +283,16 @@ export const getCurrentUser = async (): Promise<User | null> => {
 
     const sessionPromise = supabase.auth.getSession();
 
-    const { data: sessionData, error: sessionError } = await Promise.race([
+    const { data: sessionData, error: sessionError } = (await Promise.race([
       sessionPromise,
       timeoutPromise,
     ]).catch((err) => {
       console.error("Timeout or error getting session:", err);
       return { data: { session: null }, error: err };
-    });
+    })) || {
+      data: { session: null },
+      error: new Error("Failed to get session"),
+    };
 
     if (sessionError) {
       console.error("Error getting session:", sessionError);
@@ -305,7 +308,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
           .eq("id", sessionData.session.user.id)
           .single();
 
-        const { data: userData, error: userError } = await Promise.race([
+        const { data: userData, error: userError } = (await Promise.race([
           userPromise,
           new Promise((_, reject) =>
             setTimeout(
@@ -316,7 +319,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
         ]).catch((err) => {
           console.error("Timeout or error getting user data:", err);
           return { data: null, error: err };
-        });
+        })) || { data: null, error: new Error("Failed to get user data") };
 
         if (userError) {
           console.error("Error getting user data:", userError);
@@ -344,7 +347,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
       try {
         const authUserPromise = supabase.auth.getUser();
 
-        const { data: authUser } = await Promise.race([
+        const { data: authUser } = (await Promise.race([
           authUserPromise,
           new Promise((_, reject) =>
             setTimeout(
@@ -355,7 +358,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
         ]).catch((err) => {
           console.error("Timeout or error getting auth user:", err);
           return { data: { user: null } };
-        });
+        })) || { data: { user: null } };
 
         if (authUser?.user?.user_metadata) {
           const metadata = authUser.user.user_metadata;

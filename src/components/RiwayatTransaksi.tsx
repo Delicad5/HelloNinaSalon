@@ -111,9 +111,8 @@ const RiwayatTransaksi = () => {
   });
 
   // Format tanggal ke format Indonesia
-  const formatDate = (dateString) => {
-    const options = { day: "numeric", month: "long", year: "numeric" };
-    return new Date(dateString).toLocaleDateString("id-ID", options);
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
   };
 
   return (
@@ -261,7 +260,7 @@ const RiwayatTransaksi = () => {
                         <Badge
                           variant={
                             transaction.status === "completed"
-                              ? "success"
+                              ? "outline"
                               : "destructive"
                           }
                           className={

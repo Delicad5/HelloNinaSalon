@@ -56,7 +56,7 @@ const SupabaseStatus = () => {
             <Badge
               variant={
                 status === "connected"
-                  ? "success"
+                  ? "outline"
                   : status === "checking"
                     ? "outline"
                     : "destructive"

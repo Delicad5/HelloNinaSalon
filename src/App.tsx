@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState } from "react";
-import { useRoutes, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useRoutes } from "react-router-dom";
 import Home from "./components/home";
 import TransaksiForm from "./components/TransaksiForm";
 import RiwayatTransaksi from "./components/RiwayatTransaksi";
@@ -13,16 +13,21 @@ import SignupForm from "./components/SignupForm";
 import Unauthorized from "./components/Unauthorized";
 import AuthGuard from "./components/AuthGuard";
 import AppointmentScheduling from "./components/AppointmentScheduling";
-import routes from "tempo-routes";
 import { isAuthenticated, getCurrentUser, initializeUsers } from "./lib/auth";
 import { supabase } from "./lib/supabase";
 
 function App() {
-  // Use Tempo routes only in development environment
-  const tempoRoutes =
-    import.meta.env.DEV && import.meta.env.VITE_TEMPO === "true"
-      ? useRoutes(routes)
-      : null;
+  // Tempo routes are only used in development
+  // Import routes dynamically only in development
+  let tempoRoutes;
+  if (import.meta.env.DEV && import.meta.env.VITE_TEMPO === "true") {
+    try {
+      // @ts-ignore - This import is handled by the tempo plugin in development
+      tempoRoutes = useRoutes(import("tempo-routes").default);
+    } catch (e) {
+      console.error("Failed to load tempo routes:", e);
+    }
+  }
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -124,7 +129,6 @@ function App() {
 
   return (
     <Suspense fallback={<p>Loading...</p>}>
-      {tempoRoutes}
       <Routes>
         {/* Public routes */}
         <Route
@@ -249,6 +253,7 @@ function App() {
         {import.meta.env.DEV && import.meta.env.VITE_TEMPO === "true" && (
           <Route path="/tempobook/*" element={<div />} />
         )}
+        {/* The tempoRoutes variable is defined above and only used in development */}
 
         {/* Redirect to login if not authenticated */}
         <Route path="*" element={<Navigate to="/login" replace />} />
