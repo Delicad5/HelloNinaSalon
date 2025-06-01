@@ -54,9 +54,22 @@ const createSupabaseClient = () => {
 
     // Validate environment variables at runtime
     if (!supabaseUrl || !supabaseAnonKey) {
-      console.error(
-        "Missing Supabase environment variables. Please check your environment configuration.",
+      console.warn(
+        "Missing Supabase environment variables. Using fallback configuration.",
       );
+
+      // Try to use the non-VITE prefixed variables as fallback
+      const fallbackUrl = import.meta.env.SUPABASE_URL;
+      const fallbackKey = import.meta.env.SUPABASE_ANON_KEY;
+
+      if (fallbackUrl && fallbackKey) {
+        return createClient<Database>(fallbackUrl, fallbackKey, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+          },
+        });
+      }
 
       // In production, show a more user-friendly error
       if (import.meta.env.PROD && isBrowser) {

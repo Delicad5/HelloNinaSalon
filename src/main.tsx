@@ -5,6 +5,21 @@ import { BrowserRouter } from "react-router-dom";
 // Wrap in an IIFE to handle async operations and errors
 (async () => {
   try {
+    // Check if Supabase environment variables are available and log status
+    const supabaseUrl =
+      import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL;
+    const supabaseAnonKey =
+      import.meta.env.VITE_SUPABASE_ANON_KEY ||
+      import.meta.env.SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.warn(
+        "Supabase environment variables not detected. Some features may not work correctly.",
+      );
+    } else {
+      console.log("Supabase environment variables detected successfully.");
+    }
+
     // Only initialize Tempo in development mode
     if (import.meta.env.DEV) {
       try {
