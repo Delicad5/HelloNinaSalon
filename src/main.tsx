@@ -30,6 +30,24 @@ import { BrowserRouter } from "react-router-dom";
       }
     }
 
+    // Initialize default users in localStorage for production builds
+    if (import.meta.env.PROD && typeof localStorage !== "undefined") {
+      try {
+        const { DEFAULT_USERS } = await import("./lib/auth");
+        if (!localStorage.getItem("salon_auth_user") && DEFAULT_USERS) {
+          localStorage.setItem(
+            "salon_auth_user",
+            JSON.stringify(DEFAULT_USERS[0]),
+          );
+        }
+      } catch (error) {
+        console.warn(
+          "Failed to initialize default users in localStorage:",
+          error,
+        );
+      }
+    }
+
     // Dynamically import ReactDOM and App to handle potential errors
     const [ReactDOM, { default: App }] = await Promise.all([
       import("react-dom/client"),

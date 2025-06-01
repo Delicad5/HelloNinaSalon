@@ -15,7 +15,7 @@ export interface User {
 const STORAGE_KEY = "salon_auth_user";
 
 // Default users for the system
-const DEFAULT_USERS: User[] = [
+export const DEFAULT_USERS: User[] = [
   {
     id: "admin-1",
     username: "admin",
@@ -35,6 +35,13 @@ const DEFAULT_USERS: User[] = [
 // Initialize users in Supabase and localStorage if not exists
 export const initializeUsers = async (): Promise<void> => {
   try {
+    // First check if we already have users in localStorage to avoid unnecessary initialization
+    const localUsers = localStorage.getItem(STORAGE_KEY);
+    if (localUsers) {
+      console.log("Users already exist in localStorage");
+      return; // Skip initialization if users already exist locally
+    }
+
     // Check if users exist in Supabase with a timeout
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error("Supabase query timed out")), 15000); // Increased timeout
@@ -46,12 +53,16 @@ export const initializeUsers = async (): Promise<void> => {
       // Check if supabase client is properly initialized
       if (!supabase || !supabase.from) {
         console.error("Supabase client not properly initialized");
+        // Initialize default users in localStorage as fallback
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
         return; // Exit early if supabase client is not available
       }
       queryPromise = supabase.from("users").select("*");
     } catch (err) {
       console.error("Error creating Supabase query:", err);
-      queryPromise = Promise.resolve({ data: null, error: err });
+      // Initialize default users in localStorage as fallback
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
+      return;
     }
 
     const { data: supabaseUsers, error } = (await Promise.race([

@@ -39,14 +39,22 @@ function App() {
         console.log("Loading timeout reached, forcing loading state to false");
         setIsLoading(false);
       }
-    }, 10000); // 10 seconds timeout
+    }, 5000); // Reduced to 5 seconds timeout
 
     const initApp = async () => {
       try {
+        // Initialize default users in localStorage first for faster startup
+        if (!localStorage.getItem("salon_auth_user")) {
+          localStorage.setItem(
+            "salon_auth_user",
+            JSON.stringify(DEFAULT_USERS[0]),
+          );
+        }
+
         // Add a timeout promise to prevent hanging
         const initPromise = initializeUsers();
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("Initialization timed out")), 8000);
+          setTimeout(() => reject(new Error("Initialization timed out")), 5000);
         });
 
         await Promise.race([initPromise, timeoutPromise]).catch((error) => {
@@ -57,7 +65,7 @@ function App() {
 
         // Check if user is already authenticated
         try {
-          const user = await getCurrentUser();
+          const user = getCurrentUserSync(); // Use sync version to avoid additional delays
           if (user) {
             console.log("User already authenticated:", user);
           }

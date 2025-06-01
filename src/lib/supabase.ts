@@ -71,16 +71,9 @@ const createSupabaseClient = () => {
         });
       }
 
-      // In production, show a more user-friendly error
+      // Log warning but don't show error screen in production
       if (import.meta.env.PROD && isBrowser) {
-        setTimeout(() => {
-          document.body.innerHTML = `
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: system-ui, sans-serif;">
-              <h1 style="color: #333;">Configuration Error</h1>
-              <p style="color: #666;">The application is missing required configuration. Please contact support.</p>
-            </div>
-          `;
-        }, 100); // Small delay to ensure DOM is ready
+        console.warn("Using fallback Supabase configuration in production");
       }
 
       // Return a dummy client to prevent crashes
