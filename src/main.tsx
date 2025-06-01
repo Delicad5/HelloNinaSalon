@@ -16,10 +16,29 @@ if (import.meta.env.DEV) {
 
 const basename = import.meta.env.BASE_URL;
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <BrowserRouter basename={basename}>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>,
-);
+// Check if the root element exists before rendering
+const rootElement = document.getElementById("root");
+
+if (rootElement) {
+  try {
+    ReactDOM.createRoot(rootElement).render(
+      <React.StrictMode>
+        <BrowserRouter basename={basename}>
+          <App />
+        </BrowserRouter>
+      </React.StrictMode>,
+    );
+  } catch (error) {
+    console.error("Failed to render application:", error);
+
+    // Show a user-friendly error message
+    rootElement.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: system-ui, sans-serif;">
+        <h1 style="color: #333;">Application Error</h1>
+        <p style="color: #666;">The application failed to load. Please try again later.</p>
+      </div>
+    `;
+  }
+} else {
+  console.error("Root element not found");
+}
