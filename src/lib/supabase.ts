@@ -1,6 +1,42 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../types/supabase";
 
+// Create a more robust dummy client with all necessary methods
+const createDummyClient = () => {
+  return {
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          eq: () => ({
+            single: () => Promise.resolve({ data: null, error: null }),
+          }),
+          single: () => Promise.resolve({ data: null, error: null }),
+        }),
+        single: () => Promise.resolve({ data: null, error: null }),
+      }),
+      insert: () => Promise.resolve({ data: null, error: null }),
+      upsert: () => Promise.resolve({ data: null, error: null }),
+      update: () => Promise.resolve({ data: null, error: null }),
+      delete: () => Promise.resolve({ data: null, error: null }),
+    }),
+    auth: {
+      onAuthStateChange: () => ({
+        data: { subscription: { unsubscribe: () => {} } },
+        error: null,
+      }),
+      getSession: () =>
+        Promise.resolve({ data: { session: null }, error: null }),
+      getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+      signUp: () => Promise.resolve({ data: null, error: null }),
+      signInWithPassword: () =>
+        Promise.resolve({ data: { user: null }, error: null }),
+      signOut: () => Promise.resolve({ error: null }),
+    },
+    storage: { from: () => ({}) },
+    functions: { invoke: () => Promise.resolve({}) },
+  } as any;
+};
+
 // Create a function to initialize the Supabase client
 const createSupabaseClient = () => {
   // Check if we're in a browser environment
@@ -8,18 +44,7 @@ const createSupabaseClient = () => {
 
   // During build/SSR, return a dummy client
   if (!isBrowser) {
-    return {
-      from: () => ({}),
-      auth: {
-        onAuthStateChange: () => ({ data: null, error: null }),
-        getSession: () =>
-          Promise.resolve({ data: { session: null }, error: null }),
-        getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-      },
-      storage: { from: () => ({}) },
-      functions: { invoke: () => Promise.resolve({}) },
-      // Add other methods that might be used during SSR
-    } as any;
+    return createDummyClient();
   }
 
   try {
@@ -46,17 +71,7 @@ const createSupabaseClient = () => {
       }
 
       // Return a dummy client to prevent crashes
-      return {
-        from: () => ({}),
-        auth: {
-          onAuthStateChange: () => ({ data: null, error: null }),
-          getSession: () =>
-            Promise.resolve({ data: { session: null }, error: null }),
-          getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-        },
-        storage: { from: () => ({}) },
-        functions: { invoke: () => Promise.resolve({}) },
-      } as any;
+      return createDummyClient();
     }
 
     // Create and return the real Supabase client
@@ -70,17 +85,7 @@ const createSupabaseClient = () => {
     console.error("Error initializing Supabase client:", error);
 
     // Return a dummy client to prevent crashes
-    return {
-      from: () => ({}),
-      auth: {
-        onAuthStateChange: () => ({ data: null, error: null }),
-        getSession: () =>
-          Promise.resolve({ data: { session: null }, error: null }),
-        getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-      },
-      storage: { from: () => ({}) },
-      functions: { invoke: () => Promise.resolve({}) },
-    } as any;
+    return createDummyClient();
   }
 };
 

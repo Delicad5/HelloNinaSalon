@@ -37,10 +37,17 @@ export const initializeUsers = async (): Promise<void> => {
   try {
     // Check if users exist in Supabase with a timeout
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("Supabase query timed out")), 5000);
+      setTimeout(() => reject(new Error("Supabase query timed out")), 8000);
     });
 
-    const queryPromise = supabase.from("users").select("*");
+    // Safely access Supabase client
+    let queryPromise;
+    try {
+      queryPromise = supabase.from("users").select("*");
+    } catch (err) {
+      console.error("Error creating Supabase query:", err);
+      queryPromise = Promise.resolve({ data: null, error: err });
+    }
 
     const { data: supabaseUsers, error } = (await Promise.race([
       queryPromise,
