@@ -814,7 +814,13 @@ const TransaksiForm = ({
                             }}
                           >
                             <SelectTrigger className="w-[140px]">
-                              <SelectValue placeholder="Pilih staf" />
+                              <SelectValue placeholder="Pilih staf">
+                                {item.staffId
+                                  ? staffList.find(
+                                      (staff) => staff.id === item.staffId,
+                                    )?.name || "Pilih staf"
+                                  : "Pilih staf"}
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                               {staffList.length > 0 ? (

@@ -210,42 +210,102 @@ const PembayaranSystem = ({
       }
     }
 
-    // Create a printable receipt
+    // Create a printable receipt optimized for 58mm thermal paper
     const receiptContent = document.createElement("div");
     receiptContent.innerHTML = `
-      <div style="font-family: monospace; width: 300px; padding: 20px;">
-        <div style="text-align: center; margin-bottom: 20px;">
-          ${showLogoOnReceipt ? `<img src="${logoUrl}" alt="Logo Salon" style="width: 80px; height: 80px; margin-bottom: 10px;">` : ""}
-          <h2 style="margin: 0;">${salonName}</h2>
-          <p style="margin: 5px 0;">${salonAddress}</p>
-          <p style="margin: 5px 0;">Telp: ${salonPhone}</p>
-          <p style="margin: 5px 0;">${new Date().toLocaleDateString("id-ID")} ${new Date().toLocaleTimeString("id-ID")}</p>
-          <hr style="border-top: 1px dashed #000; margin: 10px 0;" />
+      <div style="font-family: 'Courier New', monospace; width: 200px; padding: 5px; font-size: 11px; line-height: 1.2;">
+        <div style="text-align: center; margin-bottom: 8px;">
+          ${showLogoOnReceipt ? `<img src="${logoUrl}" alt="Logo Salon" style="width: 40px; height: 40px; margin-bottom: 5px;">` : ""}
+          <div style="font-size: 12px; font-weight: bold; margin: 2px 0;">${salonName}</div>
+          <div style="font-size: 9px; margin: 1px 0;">${salonAddress}</div>
+          <div style="font-size: 9px; margin: 1px 0;">Telp: ${salonPhone}</div>
+          <div style="font-size: 9px; margin: 1px 0;">${new Date().toLocaleDateString("id-ID")} ${new Date().toLocaleTimeString("id-ID")}</div>
+          <div style="border-top: 1px dashed #000; margin: 5px 0;"></div>
         </div>
-        <div>
-          <p style="margin: 5px 0;"><b>STRUK PEMBAYARAN</b></p>
-          <p style="margin: 5px 0;">Total: ${formatRupiah(totalBayar)}</p>
+        <div style="margin-bottom: 8px;">
+          <div style="font-weight: bold; text-align: center; margin-bottom: 5px;">STRUK PEMBAYARAN</div>
           ${
-            metodePembayaran === "tunai"
-              ? `<p style="margin: 5px 0;">Tunai: ${jumlahTunai ? formatRupiah(parseInt(jumlahTunai)) : "-"}</p>
-          <p style="margin: 5px 0;">Kembalian: ${jumlahTunai ? formatRupiah(kembalian) : "-"}</p>`
+            transactionData && transactionData.items
+              ? transactionData.items
+                  .map(
+                    (item) =>
+                      `<div style="display: flex; justify-content: space-between; margin: 2px 0; font-size: 10px;">
+              <span style="flex: 1;">${item.name}</span>
+              <span>${formatRupiah(item.price * item.quantity)}</span>
+            </div>`,
+                  )
+                  .join("")
               : ""
           }
-          <p style="margin: 5px 0;">Metode: ${metodePembayaran.toUpperCase()}</p>
-          <hr style="border-top: 1px dashed #000; margin: 10px 0;" />
+          <div style="border-top: 1px dashed #000; margin: 5px 0;"></div>
+          <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+            <span>Subtotal:</span>
+            <span>${transactionData ? formatRupiah(transactionData.subtotal || totalBayar) : formatRupiah(totalBayar)}</span>
+          </div>
+          ${
+            transactionData && transactionData.discountAmount > 0
+              ? `<div style="display: flex; justify-content: space-between; margin: 2px 0;">
+              <span>Diskon:</span>
+              <span>-${formatRupiah(transactionData.discountAmount)}</span>
+            </div>`
+              : ""
+          }
+          <div style="display: flex; justify-content: space-between; margin: 2px 0; font-weight: bold;">
+            <span>Total:</span>
+            <span>${formatRupiah(totalBayar)}</span>
+          </div>
+          ${
+            metodePembayaran === "tunai"
+              ? `<div style="display: flex; justify-content: space-between; margin: 2px 0;">
+                  <span>Tunai:</span>
+                  <span>${jumlahTunai ? formatRupiah(parseInt(jumlahTunai)) : "-"}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+                  <span>Kembalian:</span>
+                  <span>${jumlahTunai ? formatRupiah(kembalian) : "-"}</span>
+                </div>`
+              : ""
+          }
+          <div style="display: flex; justify-content: space-between; margin: 2px 0;">
+            <span>Metode:</span>
+            <span>${metodePembayaran.toUpperCase()}</span>
+          </div>
+          <div style="border-top: 1px dashed #000; margin: 5px 0;"></div>
         </div>
-        <div style="text-align: center;">
-          <p style="margin: 5px 0;">Terima kasih atas kunjungan Anda</p>
-          <p style="margin: 5px 0;">Sampai jumpa kembali</p>
+        <div style="text-align: center; font-size: 9px;">
+          <div style="margin: 2px 0;">Terima kasih atas kunjungan Anda</div>
+          <div style="margin: 2px 0;">Sampai jumpa kembali</div>
         </div>
       </div>
     `;
 
-    // Create a new window for printing
+    // Create a new window for printing with 58mm paper settings
     const printWindow = window.open("", "_blank");
-    printWindow.document.write(
-      "<html><head><title>Struk Pembayaran</title></head><body>",
-    );
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Struk Pembayaran</title>
+          <style>
+            @media print {
+              @page {
+                size: 58mm auto;
+                margin: 0;
+              }
+              body {
+                margin: 0;
+                padding: 0;
+                width: 58mm;
+              }
+            }
+            body {
+              margin: 0;
+              padding: 0;
+              font-family: 'Courier New', monospace;
+            }
+          </style>
+        </head>
+        <body>
+    `);
     printWindow.document.write(receiptContent.innerHTML);
     printWindow.document.write("</body></html>");
     printWindow.document.close();
