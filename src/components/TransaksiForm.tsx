@@ -658,9 +658,7 @@ const TransaksiForm = ({
                     <TableHead>Harga</TableHead>
                     <TableHead>Jumlah</TableHead>
                     <TableHead>Subtotal</TableHead>
-                    {transactionItems.some(
-                      (item) => item.type === "service",
-                    ) && <TableHead>Staf</TableHead>}
+                    <TableHead>Staf</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -707,31 +705,29 @@ const TransaksiForm = ({
                         Rp{" "}
                         {(item.price * item.quantity).toLocaleString("id-ID")}
                       </TableCell>
-                      {transactionItems.some(
-                        (item) => item.type === "service",
-                      ) && (
-                        <TableCell>
-                          {item.type === "service" ? (
-                            <Select
-                              value={item.staffId}
-                              onValueChange={(value) =>
-                                assignStaff(index, value)
-                              }
-                            >
-                              <SelectTrigger className="w-[140px]">
-                                <SelectValue placeholder="Pilih staf" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {staffList.map((staff) => (
-                                  <SelectItem key={staff.id} value={staff.id}>
-                                    {staff.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : null}
-                        </TableCell>
-                      )}
+                      <TableCell>
+                        {item.type === "service" ? (
+                          <Select
+                            value={item.staffId}
+                            onValueChange={(value) => assignStaff(index, value)}
+                          >
+                            <SelectTrigger className="w-[140px]">
+                              <SelectValue placeholder="Pilih staf" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {staffList.map((staff) => (
+                                <SelectItem key={staff.id} value={staff.id}>
+                                  {staff.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">
+                            -
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Button
                           variant="ghost"
