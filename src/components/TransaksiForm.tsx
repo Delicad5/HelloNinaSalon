@@ -126,73 +126,145 @@ const TransaksiForm = ({
     { id: "3", name: "Maya", phone: "083456789012", email: "maya@example.com" },
   ]);
 
-  // Load data from localStorage
+  // Load data from localStorage and Supabase
   useEffect(() => {
-    // Load services
-    const storedLayanan = localStorage.getItem("layananData");
-    if (storedLayanan) {
+    const loadData = async () => {
       try {
-        const layananItems = JSON.parse(storedLayanan);
-        const mappedServices = layananItems.map((item) => ({
-          id: item.id,
-          name: item.nama,
-          price: item.harga,
-        }));
-        setServices(mappedServices);
+        // Load services from dataService
+        const servicesData = await import("../lib/dataService").then((module) =>
+          module.servicesService.getAll(),
+        );
+        if (servicesData && servicesData.length > 0) {
+          const mappedServices = servicesData.map((item) => ({
+            id: item.id,
+            name: item.name || item.nama,
+            price: item.price || item.harga,
+          }));
+          setServices(mappedServices);
+        }
       } catch (error) {
         console.error("Error loading services:", error);
+        // Fallback to localStorage
+        const storedLayanan = localStorage.getItem("layananData");
+        if (storedLayanan) {
+          try {
+            const layananItems = JSON.parse(storedLayanan);
+            const mappedServices = layananItems.map((item) => ({
+              id: item.id,
+              name: item.nama,
+              price: item.harga,
+            }));
+            setServices(mappedServices);
+          } catch (error) {
+            console.error("Error loading services from localStorage:", error);
+          }
+        }
       }
-    }
 
-    // Load products
-    const storedProduk = localStorage.getItem("produkData");
-    if (storedProduk) {
       try {
-        const produkItems = JSON.parse(storedProduk);
-        const mappedProducts = produkItems.map((item) => ({
-          id: item.id,
-          name: item.nama,
-          price: item.harga,
-          stock: item.stok,
-        }));
-        setProducts(mappedProducts);
+        // Load products from dataService
+        const productsData = await import("../lib/dataService").then((module) =>
+          module.productsService.getAll(),
+        );
+        if (productsData && productsData.length > 0) {
+          const mappedProducts = productsData.map((item) => ({
+            id: item.id,
+            name: item.name || item.nama,
+            price: item.price || item.harga,
+            stock: item.stock || item.stok,
+          }));
+          setProducts(mappedProducts);
+        }
       } catch (error) {
         console.error("Error loading products:", error);
+        // Fallback to localStorage
+        const storedProduk = localStorage.getItem("produkData");
+        if (storedProduk) {
+          try {
+            const produkItems = JSON.parse(storedProduk);
+            const mappedProducts = produkItems.map((item) => ({
+              id: item.id,
+              name: item.nama,
+              price: item.harga,
+              stock: item.stok,
+            }));
+            setProducts(mappedProducts);
+          } catch (error) {
+            console.error("Error loading products from localStorage:", error);
+          }
+        }
       }
-    }
 
-    // Load staff
-    const storedStaf = localStorage.getItem("stafData");
-    if (storedStaf) {
       try {
-        const stafItems = JSON.parse(storedStaf);
-        const mappedStaff = stafItems.map((item) => ({
-          id: item.id,
-          name: item.nama,
-          role: item.posisi,
-        }));
-        setStaffList(mappedStaff);
+        // Load staff from dataService
+        const staffData = await import("../lib/dataService").then((module) =>
+          module.staffService.getAll(),
+        );
+        if (staffData && staffData.length > 0) {
+          const mappedStaff = staffData.map((item) => ({
+            id: item.id,
+            name: item.name || item.nama,
+            role: item.position || item.posisi,
+          }));
+          setStaffList(mappedStaff);
+          console.log("Staff loaded:", mappedStaff);
+        }
       } catch (error) {
         console.error("Error loading staff:", error);
+        // Fallback to localStorage
+        const storedStaf = localStorage.getItem("stafData");
+        if (storedStaf) {
+          try {
+            const stafItems = JSON.parse(storedStaf);
+            const mappedStaff = stafItems.map((item) => ({
+              id: item.id,
+              name: item.nama,
+              role: item.posisi,
+            }));
+            setStaffList(mappedStaff);
+            console.log("Staff loaded from localStorage:", mappedStaff);
+          } catch (error) {
+            console.error("Error loading staff from localStorage:", error);
+          }
+        }
       }
-    }
 
-    // Load customers
-    const storedPelanggan = localStorage.getItem("pelangganData");
-    if (storedPelanggan) {
       try {
-        const pelangganItems = JSON.parse(storedPelanggan);
-        const mappedCustomers = pelangganItems.map((item) => ({
-          id: item.id,
-          name: item.nama,
-          phone: item.telepon,
-          email: item.email,
-        }));
-        setCustomers(mappedCustomers);
+        // Load customers from dataService
+        const customersData = await import("../lib/dataService").then(
+          (module) => module.customersService.getAll(),
+        );
+        if (customersData && customersData.length > 0) {
+          const mappedCustomers = customersData.map((item) => ({
+            id: item.id,
+            name: item.name || item.nama,
+            phone: item.phone || item.telepon,
+            email: item.email,
+          }));
+          setCustomers(mappedCustomers);
+        }
       } catch (error) {
         console.error("Error loading customers:", error);
+        // Fallback to localStorage
+        const storedPelanggan = localStorage.getItem("pelangganData");
+        if (storedPelanggan) {
+          try {
+            const pelangganItems = JSON.parse(storedPelanggan);
+            const mappedCustomers = pelangganItems.map((item) => ({
+              id: item.id,
+              name: item.nama,
+              phone: item.telepon,
+              email: item.email,
+            }));
+            setCustomers(mappedCustomers);
+          } catch (error) {
+            console.error("Error loading customers from localStorage:", error);
+          }
+        }
       }
-    }
+    };
+
+    loadData();
   }, []);
 
   // State
@@ -291,9 +363,11 @@ const TransaksiForm = ({
 
   // Assign staff to service
   const assignStaff = (itemIndex: number, staffId: string) => {
+    console.log("Assigning staff:", staffId, "to item at index:", itemIndex);
     const updatedItems = [...transactionItems];
     updatedItems[itemIndex].staffId = staffId;
     setTransactionItems(updatedItems);
+    console.log("Updated transaction items:", updatedItems);
   };
 
   // Handle new customer submission
@@ -337,8 +411,9 @@ const TransaksiForm = ({
   };
 
   // Handle form submission
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const transactionData = {
+      id: `trans-${Date.now()}`,
       customer: selectedCustomer,
       items: transactionItems,
       subtotal,
@@ -347,10 +422,34 @@ const TransaksiForm = ({
       discountAmount,
       total,
       date: new Date(),
+      time: new Date().toTimeString().slice(0, 5),
+      status: "pending",
+      paymentMethod: "cash",
     };
+
+    console.log(
+      "Submitting transaction with staff assignments:",
+      transactionData,
+    );
 
     // Store transaction data in localStorage
     localStorage.setItem("currentTransaction", JSON.stringify(transactionData));
+
+    // Also save to transaction history for persistence
+    try {
+      const { transactionsService } = await import("../lib/dataService");
+      await transactionsService.save([transactionData]);
+      console.log("Transaction saved to database");
+    } catch (error) {
+      console.error("Error saving transaction:", error);
+      // Fallback to localStorage
+      const existingTransactions = localStorage.getItem("transactionHistory");
+      const transactions = existingTransactions
+        ? JSON.parse(existingTransactions)
+        : [];
+      transactions.push(transactionData);
+      localStorage.setItem("transactionHistory", JSON.stringify(transactions));
+    }
 
     // Navigate to payment page
     window.location.href = "/pembayaran";
@@ -708,18 +807,27 @@ const TransaksiForm = ({
                       <TableCell>
                         {item.type === "service" ? (
                           <Select
-                            value={item.staffId}
-                            onValueChange={(value) => assignStaff(index, value)}
+                            value={item.staffId || ""}
+                            onValueChange={(value) => {
+                              console.log("Staff selected:", value);
+                              assignStaff(index, value);
+                            }}
                           >
                             <SelectTrigger className="w-[140px]">
                               <SelectValue placeholder="Pilih staf" />
                             </SelectTrigger>
                             <SelectContent>
-                              {staffList.map((staff) => (
-                                <SelectItem key={staff.id} value={staff.id}>
-                                  {staff.name}
+                              {staffList.length > 0 ? (
+                                staffList.map((staff) => (
+                                  <SelectItem key={staff.id} value={staff.id}>
+                                    {staff.name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="no-staff" disabled>
+                                  Tidak ada staff tersedia
                                 </SelectItem>
-                              ))}
+                              )}
                             </SelectContent>
                           </Select>
                         ) : (
