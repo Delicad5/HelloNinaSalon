@@ -304,12 +304,6 @@ const Home = () => {
                   {currentUser?.name || "User"}
                 </span>
                 <Avatar>
-                  <AvatarImage
-                    src={
-                      currentUser?.avatar ||
-                      "https://api.dicebear.com/7.x/avataaars/svg?seed=user"
-                    }
-                  />
                   <AvatarFallback>
                     {currentUser?.name?.charAt(0) || "U"}
                   </AvatarFallback>

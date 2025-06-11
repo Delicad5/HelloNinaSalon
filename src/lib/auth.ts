@@ -9,7 +9,6 @@ export interface User {
   username: string;
   role: UserRole;
   name: string;
-  avatar?: string;
 }
 
 const STORAGE_KEY = "salon_auth_user";
@@ -21,14 +20,12 @@ export const DEFAULT_USERS: User[] = [
     username: "admin",
     role: "admin",
     name: "Administrator",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=admin",
   },
   {
     id: "staff-1",
     username: "staff",
     role: "staff",
     name: "Staff",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=staff",
   },
 ];
 
@@ -96,8 +93,6 @@ export const initializeUsers = async (): Promise<void> => {
                 username: "admin",
                 full_name: "Administrator",
                 role: "admin",
-                avatar_url:
-                  "https://api.dicebear.com/7.x/avataaars/svg?seed=admin",
               },
             },
           });
@@ -118,8 +113,6 @@ export const initializeUsers = async (): Promise<void> => {
                 username: "staff",
                 full_name: "Staff",
                 role: "staff",
-                avatar_url:
-                  "https://api.dicebear.com/7.x/avataaars/svg?seed=staff",
               },
             },
           });
@@ -187,7 +180,6 @@ export const getUsers = async (): Promise<User[]> => {
         username: user.username,
         role: user.role as UserRole,
         name: user.full_name,
-        avatar: user.avatar_url,
       }));
 
       return mappedUsers;
@@ -200,81 +192,89 @@ export const getUsers = async (): Promise<User[]> => {
   }
 };
 
-// Login function - uses Supabase authentication
+// Login function - simplified for demo with fallback to default users
 export const login = async (
   username: string,
   password: string,
 ): Promise<User | null> => {
   try {
-    // First, find the user's email by username
-    const { data: users, error: userError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("username", username)
-      .eq("status", "active");
+    // For demo purposes, check default credentials first
+    const defaultUser = DEFAULT_USERS.find((u) => u.username === username);
 
-    if (userError) {
-      console.error("Error finding user by username:", userError);
-      throw userError;
+    if (defaultUser) {
+      // Simple password check for demo users
+      if (
+        (username === "admin" && password === "admin") ||
+        (username === "staff" && password === "staff")
+      ) {
+        // Store the current user in localStorage
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultUser));
+        return defaultUser;
+      } else {
+        console.error("Invalid password for default user:", username);
+        return null;
+      }
     }
 
-    if (!users || users.length === 0) {
-      console.error("User not found:", username);
-      return null;
-    }
+    // Try to find user in Supabase for non-default users
+    try {
+      const { data: users, error: userError } = await supabase
+        .from("users")
+        .select("*")
+        .eq("username", username)
+        .eq("status", "active");
 
-    // For demo purposes, use hardcoded emails for default users
-    let email = "";
-    if (username === "admin") {
-      email = "admin@example.com";
-    } else if (username === "staff") {
-      email = "staff@example.com";
-    } else {
-      // For other users, we would need to store their email in the users table
-      // This is a simplification for the demo
-      email = `${username}@example.com`;
-    }
+      if (userError) {
+        console.error("Error finding user by username:", userError);
+        return null;
+      }
 
-    // Now sign in with email and password
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+      if (!users || users.length === 0) {
+        console.error("User not found:", username);
+        return null;
+      }
 
-    if (error) {
-      console.error("Error during login:", error);
+      // For demo purposes, use hardcoded emails for authentication
+      let email = "";
+      if (username === "admin") {
+        email = "admin@example.com";
+      } else if (username === "staff") {
+        email = "staff@example.com";
+      } else {
+        email = `${username}@example.com`;
+      }
 
-      // For demo purposes, if login fails with Supabase auth, use the public.users table
+      // Try Supabase authentication
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error("Error during Supabase login:", error);
+        return null;
+      }
+
+      if (!data.user) {
+        console.error("No user returned from signIn");
+        return null;
+      }
+
+      // Map Supabase user to our User type
       const user: User = {
         id: users[0].id,
         username: users[0].username,
         role: users[0].role as UserRole,
         name: users[0].full_name,
-        avatar: users[0].avatar_url,
       };
 
       // Store the current user in localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
       return user;
-    }
-
-    if (!data.user) {
-      console.error("No user returned from signIn");
+    } catch (supabaseError) {
+      console.error("Error with Supabase authentication:", supabaseError);
       return null;
     }
-
-    // Map Supabase user to our User type
-    const user: User = {
-      id: users[0].id,
-      username: users[0].username,
-      role: users[0].role as UserRole,
-      name: users[0].full_name,
-      avatar: users[0].avatar_url,
-    };
-
-    // Store the current user in localStorage for offline access
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-    return user;
   } catch (error) {
     console.error("Error in login:", error);
     return null;
@@ -353,7 +353,6 @@ export const getCurrentUser = async (): Promise<User | null> => {
             username: userData.username,
             role: userData.role as UserRole,
             name: userData.full_name,
-            avatar: userData.avatar_url,
           };
 
           // Update localStorage
@@ -390,7 +389,6 @@ export const getCurrentUser = async (): Promise<User | null> => {
             username: metadata.username || "user",
             role: (metadata.role as UserRole) || "staff",
             name: metadata.full_name || metadata.username || "User",
-            avatar: metadata.avatar_url,
           };
 
           // Update localStorage
