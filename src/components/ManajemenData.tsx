@@ -355,28 +355,50 @@ const ManajemenData = () => {
     const loadStaffData = async () => {
       setIsLoading(true);
       try {
+        console.log("Loading staff data from Supabase...");
         const staffData = await staffService.getAll();
+        console.log("Raw staff data from service:", staffData);
 
-        // Map Supabase staff data to the format expected by the component
-        const mappedStaffData = staffData.map((staff) => ({
-          id: staff.id,
-          nama: staff.name,
-          posisi: staff.position,
-          telepon: staff.phone,
-          status: staff.status,
-          komisi: staff.commission_rate,
-        }));
+        if (staffData && staffData.length > 0) {
+          // Check if data is already in the expected format or needs mapping
+          const mappedStaffData = staffData.map((staff) => {
+            // If data comes from Supabase, it has different field names
+            if (staff.name && staff.position) {
+              return {
+                id: staff.id,
+                nama: staff.name,
+                posisi: staff.position,
+                telepon: staff.phone || "",
+                status: staff.status || "Aktif",
+                komisi: staff.commission_rate || 10,
+              };
+            }
+            // If data comes from localStorage, it's already in the right format
+            return {
+              id: staff.id,
+              nama: staff.nama || staff.name,
+              posisi: staff.posisi || staff.position,
+              telepon: staff.telepon || staff.phone || "",
+              status: staff.status || "Aktif",
+              komisi: staff.komisi || staff.commission_rate || 10,
+            };
+          });
 
-        setStafItems(mappedStaffData);
+          console.log("Mapped staff data:", mappedStaffData);
+          setStafItems(mappedStaffData);
+        } else {
+          console.log("No staff data found, using empty array");
+          setStafItems([]);
+        }
       } catch (error) {
-        console.error("Error loading staff data from Supabase:", error);
+        console.error("Error loading staff data:", error);
         toast({
           title: "Error",
           description: "Gagal memuat data staf dari database.",
           variant: "destructive",
         });
-        // Fallback to mock data if Supabase fails
-        setStafItems(stafData);
+        // Don't fallback to mock data, keep empty array
+        setStafItems([]);
       } finally {
         setIsLoading(false);
       }
@@ -541,8 +563,11 @@ const ManajemenData = () => {
       } else if (activeTab === "staf") {
         setIsLoading(true);
         try {
-          // Map the form data to Supabase staff format
-          const staffData = {
+          console.log("Adding new staff:", currentItem);
+
+          // Create new staff item with proper ID
+          const newStaffItem = {
+            id: newId,
             name: currentItem.nama,
             position: currentItem.posisi,
             phone: currentItem.telepon,
@@ -550,35 +575,47 @@ const ManajemenData = () => {
             commission_rate: currentItem.komisi,
           };
 
+          // Get current staff data and add new item
+          const currentStaffData = await staffService.getAll();
+          const updatedStaffData = [...currentStaffData, newStaffItem];
+
+          console.log("Saving staff data:", updatedStaffData);
+
           // Save to Supabase
-          const success = await staffService.save([
-            ...stafItems.map((item) => ({
-              id: item.id,
-              name: item.nama,
-              position: item.posisi,
-              phone: item.telepon,
-              status: item.status,
-              commission_rate: item.komisi,
-            })),
-            staffData,
-          ]);
+          const success = await staffService.save(updatedStaffData);
 
           if (success) {
-            // Refresh staff data from Supabase
-            const staffData = await staffService.getAll();
-            const mappedStaffData = staffData.map((staff) => ({
-              id: staff.id,
-              nama: staff.name,
-              posisi: staff.position,
-              telepon: staff.phone,
-              status: staff.status,
-              komisi: staff.commission_rate,
-            }));
+            console.log("Staff saved successfully, refreshing data...");
+            // Refresh staff data from Supabase to ensure consistency
+            const refreshedStaffData = await staffService.getAll();
 
+            const mappedStaffData = refreshedStaffData.map((staff) => {
+              if (staff.name && staff.position) {
+                return {
+                  id: staff.id,
+                  nama: staff.name,
+                  posisi: staff.position,
+                  telepon: staff.phone || "",
+                  status: staff.status || "Aktif",
+                  komisi: staff.commission_rate || 10,
+                };
+              }
+              return {
+                id: staff.id,
+                nama: staff.nama || staff.name,
+                posisi: staff.posisi || staff.position,
+                telepon: staff.telepon || staff.phone || "",
+                status: staff.status || "Aktif",
+                komisi: staff.komisi || staff.commission_rate || 10,
+              };
+            });
+
+            console.log("Refreshed staff data:", mappedStaffData);
             setStafItems(mappedStaffData);
             toast({
               title: "Sukses",
-              description: "Data staf berhasil ditambahkan.",
+              description:
+                "Data staf berhasil ditambahkan dan disimpan ke database.",
             });
           } else {
             throw new Error("Failed to save staff to Supabase");
@@ -587,7 +624,7 @@ const ManajemenData = () => {
           console.error("Error adding staff:", error);
           toast({
             title: "Error",
-            description: "Gagal menambahkan data staf.",
+            description: "Gagal menambahkan data staf ke database.",
             variant: "destructive",
           });
         } finally {
@@ -644,29 +681,72 @@ const ManajemenData = () => {
       } else if (activeTab === "staf") {
         setIsLoading(true);
         try {
-          // Map all staff items to Supabase format
-          const updatedItems = stafItems.map((item) =>
-            item.id === currentItem.id ? currentItem : item,
-          );
+          console.log("Updating staff:", currentItem);
 
-          // Convert to Supabase format
-          const supabaseStaffData = updatedItems.map((item) => ({
-            id: item.id,
-            name: item.nama,
-            position: item.posisi,
-            phone: item.telepon,
-            status: item.status,
-            commission_rate: item.komisi,
-          }));
+          // Get current staff data from Supabase
+          const currentStaffData = await staffService.getAll();
+
+          // Update the specific item
+          const updatedStaffData = currentStaffData.map((item) => {
+            if (item.id === currentItem.id) {
+              return {
+                id: currentItem.id,
+                name: currentItem.nama,
+                position: currentItem.posisi,
+                phone: currentItem.telepon,
+                status: currentItem.status,
+                commission_rate: currentItem.komisi,
+              };
+            }
+            // Keep existing format for other items
+            return item.name
+              ? item
+              : {
+                  id: item.id,
+                  name: item.nama,
+                  position: item.posisi,
+                  phone: item.telepon,
+                  status: item.status,
+                  commission_rate: item.komisi,
+                };
+          });
+
+          console.log("Saving updated staff data:", updatedStaffData);
 
           // Save to Supabase
-          const success = await staffService.save(supabaseStaffData);
+          const success = await staffService.save(updatedStaffData);
 
           if (success) {
-            setStafItems(updatedItems);
+            console.log("Staff updated successfully, refreshing data...");
+            // Refresh staff data from Supabase to ensure consistency
+            const refreshedStaffData = await staffService.getAll();
+
+            const mappedStaffData = refreshedStaffData.map((staff) => {
+              if (staff.name && staff.position) {
+                return {
+                  id: staff.id,
+                  nama: staff.name,
+                  posisi: staff.position,
+                  telepon: staff.phone || "",
+                  status: staff.status || "Aktif",
+                  komisi: staff.commission_rate || 10,
+                };
+              }
+              return {
+                id: staff.id,
+                nama: staff.nama || staff.name,
+                posisi: staff.posisi || staff.position,
+                telepon: staff.telepon || staff.phone || "",
+                status: staff.status || "Aktif",
+                komisi: staff.komisi || staff.commission_rate || 10,
+              };
+            });
+
+            console.log("Refreshed staff data after update:", mappedStaffData);
+            setStafItems(mappedStaffData);
             toast({
               title: "Sukses",
-              description: "Data staf berhasil diperbarui.",
+              description: "Data staf berhasil diperbarui di database.",
             });
           } else {
             throw new Error("Failed to update staff in Supabase");
@@ -675,7 +755,7 @@ const ManajemenData = () => {
           console.error("Error updating staff:", error);
           toast({
             title: "Error",
-            description: "Gagal memperbarui data staf.",
+            description: "Gagal memperbarui data staf di database.",
             variant: "destructive",
           });
         } finally {

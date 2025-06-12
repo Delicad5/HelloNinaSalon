@@ -248,9 +248,112 @@ export const productsService = {
 };
 
 export const staffService = {
-  getAll: () => getData<any>("staff", "stafData"),
-  save: (data: any[]) => saveData("staff", "stafData", data),
-  delete: (id: string) => deleteData("staff", "stafData", id),
+  getAll: async () => {
+    try {
+      // Always try to get data from Supabase first
+      const { data, error } = await supabase.from("staff").select("*");
+
+      if (error) {
+        console.error("Error fetching staff from Supabase:", error);
+        // Fallback to localStorage only if Supabase fails
+        const localData = localStorage.getItem("stafData");
+        if (localData) {
+          return JSON.parse(localData);
+        }
+        return [];
+      }
+
+      // Update localStorage with fresh data from Supabase
+      if (data) {
+        localStorage.setItem("stafData", JSON.stringify(data));
+        return data;
+      }
+
+      return [];
+    } catch (error) {
+      console.error("Error in staffService.getAll:", error);
+      // Fallback to localStorage
+      const localData = localStorage.getItem("stafData");
+      if (localData) {
+        return JSON.parse(localData);
+      }
+      return [];
+    }
+  },
+  save: async (data: any[]) => {
+    try {
+      // Ensure all items have proper IDs
+      const dataWithIds = data.map((item) => ({
+        ...item,
+        id: item.id || uuidv4(),
+      }));
+
+      // Save to Supabase first
+      const { error } = await supabase.from("staff").upsert(dataWithIds);
+
+      if (error) {
+        console.error("Error saving staff to Supabase:", error);
+        // Save to localStorage as fallback
+        localStorage.setItem("stafData", JSON.stringify(dataWithIds));
+        return false;
+      }
+
+      // Update localStorage with the saved data
+      localStorage.setItem("stafData", JSON.stringify(dataWithIds));
+      console.log(
+        `Successfully saved ${dataWithIds.length} staff items to Supabase`,
+      );
+      return true;
+    } catch (error) {
+      console.error("Error in staffService.save:", error);
+      // Save to localStorage as fallback
+      const dataWithIds = data.map((item) => ({
+        ...item,
+        id: item.id || uuidv4(),
+      }));
+      localStorage.setItem("stafData", JSON.stringify(dataWithIds));
+      return false;
+    }
+  },
+  delete: async (id: string) => {
+    try {
+      // Delete from Supabase first
+      const { error } = await supabase.from("staff").delete().eq("id", id);
+
+      if (error) {
+        console.error("Error deleting staff from Supabase:", error);
+        // Update localStorage as fallback
+        const localData = localStorage.getItem("stafData");
+        if (localData) {
+          const parsedData = JSON.parse(localData);
+          const updatedData = parsedData.filter((item) => item.id !== id);
+          localStorage.setItem("stafData", JSON.stringify(updatedData));
+        }
+        return false;
+      }
+
+      // Update localStorage to keep it in sync
+      const localData = localStorage.getItem("stafData");
+      if (localData) {
+        const parsedData = JSON.parse(localData);
+        const updatedData = parsedData.filter((item) => item.id !== id);
+        localStorage.setItem("stafData", JSON.stringify(updatedData));
+      }
+
+      console.log(`Successfully deleted staff with id ${id} from Supabase`);
+      return true;
+    } catch (error) {
+      console.error("Error in staffService.delete:", error);
+      // Update localStorage as fallback
+      const localData = localStorage.getItem("stafData");
+      if (localData) {
+        const parsedData = JSON.parse(localData);
+        const updatedData = parsedData.filter((item) => item.id !== id);
+        localStorage.setItem("stafData", JSON.stringify(updatedData));
+      }
+      return false;
+    }
+  },
 };
 
 export const customersService = {
